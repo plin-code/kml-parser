@@ -2,9 +2,9 @@
 
 namespace PlinCode\KmlParser;
 
+use PlinCode\KmlParser\Commands\KmlParserCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use PlinCode\KmlParser\Commands\KmlParserCommand;
 
 class KmlParserServiceProvider extends PackageServiceProvider
 {
