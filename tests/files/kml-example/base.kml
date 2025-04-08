@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>PIEMONTE</name>
+    <Style id="icon-1899-000000-normal">
+      <IconStyle>
+        <scale>1</scale>
+        <Icon>
+          <href>images/icon-1.png</href>
+        </Icon>
+        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>
+      </IconStyle>
+      <LabelStyle>
+        <scale>0</scale>
+      </LabelStyle>
+    </Style>
+    <Style id="icon-1899-000000-highlight">
+      <IconStyle>
+        <scale>1</scale>
+        <Icon>
+          <href>images/icon-1.png</href>
+        </Icon>
+        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>
+      </IconStyle>
+      <LabelStyle>
+        <scale>1</scale>
+      </LabelStyle>
+    </Style>
+    <StyleMap id="icon-1899-000000">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#icon-1899-000000-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#icon-1899-000000-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Placemark>
+      <name>Lago Blu - Ayas</name>
+      <description><![CDATA[<img src="https://mymaps.usercontent.google.com/hostedimage/m/*/3ADbDBKvO7MRv6MwE4-XusGrdQWuxzhQowrYSNyOym0O2CsLqXQhSqS9HV6Tx0qOAQrnO9n147V_8Z6NZ8AmvbN0lGy6XYGLD3XxZmjixZPLzxuURcek484Cd-bNkhcAPGFYP1F4g2QZj6PcZBpx0WF1TgYMYUnWLmtlFTnAAZPxs3Ydwt8q7DoElfIpfkw_z_QKf8WN_eMxtDY3ugUM076wrLD5wQtESdifyEzrgM8-OKZfQCSDjkE1C3t8Xj8yTGg?authuser=0&fife=s16383" height="200" width="auto" /><br><br>👉Difficoltà: E<br>👉Tempo di percorrenza: 1.40 h (andata)<br>👉Dislivello: +450 m<br>👉Lunghezza: 4 km]]></description>
+      <styleUrl>#icon-1899-000000</styleUrl>
+      <ExtendedData>
+        <Data name="gx_media_links">
+          <value><![CDATA[https://mymaps.usercontent.google.com/hostedimage/m/*/3ADbDBKvO7MRv6MwE4-XusGrdQWuxzhQowrYSNyOym0O2CsLqXQhSqS9HV6Tx0qOAQrnO9n147V_8Z6NZ8AmvbN0lGy6XYGLD3XxZmjixZPLzxuURcek484Cd-bNkhcAPGFYP1F4g2QZj6PcZBpx0WF1TgYMYUnWLmtlFTnAAZPxs3Ydwt8q7DoElfIpfkw_z_QKf8WN_eMxtDY3ugUM076wrLD5wQtESdifyEzrgM8-OKZfQCSDjkE1C3t8Xj8yTGg?authuser=0&fife=s16383]]></value>
+        </Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>
+          7.7300965,45.8635629,0
+        </coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>Rifugio Barbustel</name>
+      <description><![CDATA[<img src="https://mymaps.usercontent.google.com/hostedimage/m/*/3ADbDBKtGOD39dT2V8r2QdkNXpHbOpoyeatVgc17_740QZC1Wi6docUUUjC1tujhV3GqRbSvnq1OBWbKWlhyO7VE_YOSp-kphkBZrbSOLlkEamGpVOCBDKuQbzWgZEpEKS_cNZDMWQRSGxgKg9jKIaeZeYbiSSekIkvkamZd-ZNNF5SHVDVpeJLi7Jb1rw9IRcXsUoIQNZ3zB92XeLgjPUflVIjMFVX6gd7Txh-C1M5dftDwskBCOG_v23an8nXVAUA?authuser=0&fife=s16383" height="200" width="auto" /><br><br>👉Difficoltà: E<br>👉Tempo di percorrenza: 1.40 h (andata)<br>👉Dislivello: +540 m<br>👉Lunghezza: 3,4 km]]></description>
+      <styleUrl>#icon-1899-000000</styleUrl>
+      <ExtendedData>
+        <Data name="gx_media_links">
+          <value><![CDATA[https://mymaps.usercontent.google.com/hostedimage/m/*/3ADbDBKtGOD39dT2V8r2QdkNXpHbOpoyeatVgc17_740QZC1Wi6docUUUjC1tujhV3GqRbSvnq1OBWbKWlhyO7VE_YOSp-kphkBZrbSOLlkEamGpVOCBDKuQbzWgZEpEKS_cNZDMWQRSGxgKg9jKIaeZeYbiSSekIkvkamZd-ZNNF5SHVDVpeJLi7Jb1rw9IRcXsUoIQNZ3zB92XeLgjPUflVIjMFVX6gd7Txh-C1M5dftDwskBCOG_v23an8nXVAUA?authuser=0&fife=s16383]]></value>
+        </Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>
+          7.605764,45.62891,0
+        </coordinates>
+      </Point>
+    </Placemark>
+  </Document>
+</kml>

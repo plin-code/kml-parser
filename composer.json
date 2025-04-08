@@ -1,10 +1,19 @@
 {
     "name": "plin-code/kml-parser",
-    "description": "This is a temp description.",
+    "description": "A Laravel package to parse KML and KMZ files",
     "keywords": [
         "PlinCode",
+        "plin-code",
+        "danielebarbaro",
+        "laravel-package",
         "laravel",
-        "kml-parser"
+        "kml-parser",
+        "kml",
+        "laravel-kml",
+        "kmz",
+        "laravel-kmz",
+        "geospatial",
+        "maps"
     ],
     "homepage": "https://github.com/plin-code/kml-parser",
     "license": "MIT",
@@ -13,18 +22,26 @@
             "name": "Daniele Barbaro",
             "email": "barbaro.daniele@gmail.com",
             "role": "Developer"
+        },
+        {
+            "name": "Daniele Barbaro",
+            "email": "me@plincode.tech",
+            "role": "Company"
         }
     ],
     "require": {
-        "php": "^8.4",
+        "php": "^8.3",
+        "ext-simplexml": "*",
+        "ext-libxml": "*",
+        "ext-zip": "*",
         "spatie/laravel-package-tools": "^1.16",
-        "illuminate/contracts": "^10.0||^11.0||^12.0"
+        "illuminate/contracts": "^12.0"
     },
     "require-dev": {
         "laravel/pint": "^1.14",
-        "nunomaduro/collision": "^8.1.1||^7.10.0",
-        "larastan/larastan": "^2.9||^3.0",
-        "orchestra/testbench": "^10.0.0||^9.0.0||^8.22.0",
+        "nunomaduro/collision": "^8.1.1",
+        "larastan/larastan": "^3.0",
+        "orchestra/testbench": "^10.0.0",
         "pestphp/pest": "^3.0",
         "pestphp/pest-plugin-arch": "^3.0",
         "pestphp/pest-plugin-laravel": "^3.0",

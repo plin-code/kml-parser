@@ -17,9 +17,13 @@ class KmlParserServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('kml-parser')
-            ->hasConfigFile()
-            ->hasViews()
-            ->hasMigration('create_kml_parser_table')
-            ->hasCommand(KmlParserCommand::class);
+            ->hasConfigFile();
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(KmlParser::class, function () {
+            return new KmlParser;
+        });
     }
 }

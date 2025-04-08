@@ -1,19 +1,11 @@
-# This is a temp description.
+# Laravel KML Parser
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/plin-code/kml-parser.svg?style=flat-square)](https://packagist.org/packages/plin-code/kml-parser)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/plin-code/kml-parser/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/plin-code/kml-parser/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/plin-code/kml-parser/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/plin-code/kml-parser/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/plin-code/kml-parser.svg?style=flat-square)](https://packagist.org/packages/plin-code/kml-parser)
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
-
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/kml-parser.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/kml-parser)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+A simple Laravel package to parse KML and KMZ files, extracting geographic data in a convenient format.
 
 ## Installation
 
@@ -21,13 +13,6 @@ You can install the package via composer:
 
 ```bash
 composer require plin-code/kml-parser
-```
-
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag="kml-parser-migrations"
-php artisan migrate
 ```
 
 You can publish the config file with:
@@ -40,20 +25,88 @@ This is the contents of the published config file:
 
 ```php
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Default KML Namespace
+    |--------------------------------------------------------------------------
+    |
+    | This value is the default namespace used for parsing KML files.
+    | Usually you don't need to change this.
+    |
+    */
+    'namespace' => 'http://www.opengis.net/kml/2.2',
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Temporary Directory
+    |--------------------------------------------------------------------------
+    |
+    | This value determines the temporary directory used for extracting KMZ files.
+    | If null, the system temp directory will be used.
+    |
+    */
+    'temp_directory' => null,
 ];
-```
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="kml-parser-views"
 ```
 
 ## Usage
 
+### Basic Usage
+
 ```php
-$kmlParser = new PlinCode\KmlParser();
-echo $kmlParser->echoPhrase('Hello, PlinCode!');
+use PlinCode\KmlParser\KmlParser;
+
+// Parse a KML file
+$parser = new KmlParser();
+$parser->loadFromFile('path/to/file.kml');
+
+// Get placemarks (points of interest)
+$placemarks = $parser->getPlacemarks();
+
+// Get styles
+$styles = $parser->getStyles();
+
+// Get style maps
+$styleMaps = $parser->getStyleMaps();
+
+// Get document name and description
+$name = $parser->getDocumentName();
+$description = $parser->getDocumentDescription();
+
+// Convert to GeoJSON
+$geoJson = $parser->toGeoJson();
+```
+
+### Working with KMZ Files
+
+KMZ files are ZIP archives that contain a KML file and possibly other assets like images:
+
+```php
+// Parse a KMZ file
+$parser = new KmlParser();
+$parser->loadFromKmz('path/to/file.kmz');
+
+// Work with the data just like with KML
+$placemarks = $parser->getPlacemarks();
+```
+
+Extract all files from a KMZ:
+
+```php
+use PlinCode\KmlParser\KmzExtractor;
+
+$extractor = new KmzExtractor();
+$files = $extractor->extractAllFiles('path/to/file.kmz', 'extraction/directory');
+```
+
+### Facade Usage
+
+You can also use the provided facade:
+
+```php
+use PlinCode\KmlParser\Facades\KmlParser;
+
+$placemarks = KmlParser::loadFromFile('path/to/file.kml')->getPlacemarks();
 ```
 
 ## Testing
