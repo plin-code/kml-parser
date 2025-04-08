@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace PlinCode\KmlParser\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class KmlParserCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'kml-parser';
 
     public $description = 'My command';
 

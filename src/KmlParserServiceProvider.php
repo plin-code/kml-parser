@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace PlinCode\KmlParser;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VendorName\Skeleton\Commands\SkeletonCommand;
+use PlinCode\KmlParser\Commands\KmlParserCommand;
 
-class SkeletonServiceProvider extends PackageServiceProvider
+class KmlParserServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
@@ -16,10 +16,10 @@ class SkeletonServiceProvider extends PackageServiceProvider
          * More info: https://github.com/spatie/laravel-package-tools
          */
         $package
-            ->name('skeleton')
+            ->name('kml-parser')
             ->hasConfigFile()
             ->hasViews()
-            ->hasMigration('create_migration_table_name_table')
-            ->hasCommand(SkeletonCommand::class);
+            ->hasMigration('create_kml_parser_table')
+            ->hasCommand(KmlParserCommand::class);
     }
 }
