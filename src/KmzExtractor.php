@@ -2,6 +2,7 @@
 
 namespace PlinCode\KmlParser;
 
+use PlinCode\KmlParser\Exceptions\KmlException;
 use PlinCode\KmlParser\Exceptions\KmzExtractorException;
 use ZipArchive;
 
@@ -46,19 +47,19 @@ class KmzExtractor
     }
 
     /**
-     * Extract all files from KMZ to a directory
+     * Extract all files from KMZ archive
      *
-     * @throws Exception
+     * @throws KmlException If the KMZ file cannot be found or opened
      */
     public function extractAllFiles(string $kmzPath, string $destination): array
     {
         if (! file_exists($kmzPath)) {
-            throw new Exception("KMZ file not found: {$kmzPath}");
+            throw new KmlException("KMZ file not found: {$kmzPath}");
         }
 
         $zip = new ZipArchive;
         if ($zip->open($kmzPath) !== true) {
-            throw new Exception("Unable to open KMZ file: {$kmzPath}");
+            throw new KmlException("Unable to open KMZ file: {$kmzPath}");
         }
 
         if (! file_exists($destination)) {
