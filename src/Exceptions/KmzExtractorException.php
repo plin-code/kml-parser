@@ -23,4 +23,4 @@ class KmzExtractorException extends KmlException
     {
         return new self("Invalid KMZ file: {$path}");
     }
-} 
+}

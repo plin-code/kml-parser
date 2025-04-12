@@ -5,6 +5,7 @@ namespace PlinCode\KmlParser;
 use Exception;
 use PlinCode\KmlParser\Exceptions\KmlParserException;
 use PlinCode\KmlParser\Traits\ParsesCoordinates;
+use PlinCode\KmlParser\Validators\KmlValidator;
 use SimpleXMLElement;
 
 class KmlParser
@@ -15,9 +16,12 @@ class KmlParser
 
     protected string $namespace = 'http://www.opengis.net/kml/2.2';
 
+    protected KmlValidator $validator;
+
     public function __construct()
     {
         $this->namespace = config('kml-parser.namespace', $this->namespace);
+        $this->validator = new KmlValidator;
     }
 
     /**
@@ -41,9 +45,9 @@ class KmlParser
      */
     public function loadFromString(string $content): self
     {
-        libxml_use_internal_errors(true);
-
         try {
+            $this->validator->validate($content);
+            libxml_use_internal_errors(true);
             $this->xml = new SimpleXMLElement($content);
 
             $errors = libxml_get_errors();

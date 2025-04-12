@@ -23,4 +23,4 @@ class KmlParserException extends KmlException
     {
         return new self("Failed to parse KML content: {$message}");
     }
-} 
+}
