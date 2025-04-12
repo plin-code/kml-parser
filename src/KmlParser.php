@@ -3,6 +3,7 @@
 namespace PlinCode\KmlParser;
 
 use Exception;
+use PlinCode\KmlParser\Exceptions\KmlParserException;
 use PlinCode\KmlParser\Traits\ParsesCoordinates;
 use SimpleXMLElement;
 
@@ -27,7 +28,7 @@ class KmlParser
     public function loadFromFile(string $path): self
     {
         if (! file_exists($path)) {
-            throw new Exception("KML file not found: {$path}");
+            throw KmlParserException::fileNotFound($path);
         }
 
         return $this->loadFromString(file_get_contents($path));
@@ -49,7 +50,7 @@ class KmlParser
             if ($errors) {
                 $errorMessage = $errors[0]->message;
                 libxml_clear_errors();
-                throw new Exception("XML parsing error: {$errorMessage}");
+                throw KmlParserException::invalidXml($errorMessage);
             }
 
             $this->xml->registerXPathNamespace('kml', $this->namespace);
@@ -57,7 +58,7 @@ class KmlParser
             return $this;
         } catch (\Exception $e) {
             libxml_clear_errors();
-            throw new Exception('Failed to parse KML content: '.$e->getMessage());
+            throw KmlParserException::failedToParse($e->getMessage());
         }
     }
 
@@ -82,7 +83,7 @@ class KmlParser
     public function getPlacemarks(): array
     {
         if (! $this->xml) {
-            throw new Exception('No KML data loaded');
+            throw KmlParserException::noDataLoaded();
         }
 
         $placemarks = [];

@@ -2,7 +2,7 @@
 
 namespace PlinCode\KmlParser;
 
-use Exception;
+use PlinCode\KmlParser\Exceptions\KmzExtractorException;
 use ZipArchive;
 
 class KmzExtractor
@@ -10,40 +10,39 @@ class KmzExtractor
     /**
      * Extract KML content from a KMZ file
      */
-    public function extractKmlContent(string $kmzPath): string
+    public function extractKmlContent(string $path): string
     {
-        if (! file_exists($kmzPath)) {
-            throw new Exception("KMZ file not found: {$kmzPath}");
+        if (! file_exists($path)) {
+            throw KmzExtractorException::fileNotFound($path);
         }
 
         $zip = new ZipArchive;
-        if ($zip->open($kmzPath) !== true) {
-            throw new Exception("Unable to open KMZ file: {$kmzPath}");
+        if ($zip->open($path) !== true) {
+            throw KmzExtractorException::invalidZipFile($path);
         }
 
-        $kmlIndex = -1;
-        $kmlFilename = basename($kmzPath, '.kmz').'.kml';
+        try {
+            $kmlFiles = array_filter(
+                array_map(
+                    fn (int $i) => $zip->getNameIndex($i),
+                    range(0, $zip->numFiles - 1)
+                ),
+                fn (string $filename) => pathinfo($filename, PATHINFO_EXTENSION) === 'kml'
+            );
 
-        if (($docKmlIndex = $zip->locateName('doc.kml', ZipArchive::FL_NOCASE | ZipArchive::FL_NODIR)) !== false) {
-            $kmlIndex = $docKmlIndex;
-        } elseif (($kmlNameIndex = $zip->locateName($kmlFilename, ZipArchive::FL_NOCASE | ZipArchive::FL_NODIR)) !== false) {
-            $kmlIndex = $kmlNameIndex;
-        } else {
-            $kmlIndex = collect(range(0, $zip->numFiles - 1))
-                ->map(fn ($i) => ['index' => $i, 'name' => $zip->getNameIndex($i)])
-                ->filter(fn ($file) => pathinfo($file['name'], PATHINFO_EXTENSION) === 'kml')
-                ->value('index', -1);
-        }
+            if (empty($kmlFiles)) {
+                throw KmzExtractorException::noKmlFound();
+            }
 
-        if ($kmlIndex === -1) {
+            $kmlContent = $zip->getFromIndex(array_key_first($kmlFiles));
+            if ($kmlContent === false) {
+                throw KmzExtractorException::failedToExtract('Failed to read KML file from archive');
+            }
+
+            return $kmlContent;
+        } finally {
             $zip->close();
-            throw new Exception('No KML file found in KMZ archive');
         }
-
-        $kmlContent = $zip->getFromIndex($kmlIndex);
-        $zip->close();
-
-        return $kmlContent;
     }
 
     /**
