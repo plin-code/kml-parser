@@ -22,7 +22,20 @@ class KmlParser
     public function __construct()
     {
         $this->namespace = config('kml-parser.namespace', $this->namespace);
-        $this->validator = new KmlValidator;
+        $this->validator = new KmlValidator($this->supportedNamespaces());
+    }
+
+    /**
+     * Namespaces a document is allowed to declare: the configured primary one
+     * plus every variant listed in the config.
+     *
+     * @return array<int, string>
+     */
+    protected function supportedNamespaces(): array
+    {
+        $supported = config('kml-parser.supported_namespaces', KmlValidator::DEFAULT_NAMESPACES);
+
+        return array_values(array_unique(array_merge([$this->namespace], (array) $supported)));
     }
 
     /**
@@ -60,7 +73,7 @@ class KmlParser
         $this->validator->validateDocument($xml);
 
         $this->xml = $xml;
-        $this->xml->registerXPathNamespace('kml', $this->namespace);
+        $this->xml->registerXPathNamespace('kml', $this->validator->documentNamespace());
 
         return $this;
     }
