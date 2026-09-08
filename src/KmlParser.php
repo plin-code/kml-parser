@@ -3,6 +3,7 @@
 namespace PlinCode\KmlParser;
 
 use Exception;
+use PlinCode\KmlParser\Enums\GeometryType;
 use PlinCode\KmlParser\Exceptions\KmlParserException;
 use PlinCode\KmlParser\Traits\ParsesCoordinates;
 use PlinCode\KmlParser\Validators\KmlValidator;
@@ -60,7 +61,7 @@ class KmlParser
             $this->xml->registerXPathNamespace('kml', $this->namespace);
 
             return $this;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             libxml_clear_errors();
             throw KmlParserException::failedToParse($e->getMessage());
         }
@@ -99,26 +100,16 @@ class KmlParser
                 'description' => (string) $placemarkXml->description,
             ];
 
-            if ($placemarkXml->Point) {
-                $coords = (string) $placemarkXml->Point->coordinates;
-                $coordsArray = explode(',', trim($coords));
-                $placemark['type'] = 'Point';
-                $placemark['coordinates'] = [
-                    'longitude' => (float) $coordsArray[0],
-                    'latitude' => (float) $coordsArray[1],
-                    'altitude' => isset($coordsArray[2]) ? (float) $coordsArray[2] : 0,
-                ];
-            }
+            foreach (GeometryType::cases() as $type) {
+                if ($placemarkXml->{$type->value}) {
+                    $geometry = $this->parseGeometry($type, $placemarkXml->{$type->value});
 
-            if ($placemarkXml->LineString) {
-                $coords = (string) $placemarkXml->LineString->coordinates;
-                $placemark['type'] = 'LineString';
-                $placemark['coordinates'] = $this->parseLineStringCoordinates($coords);
-            }
+                    if ($geometry !== null) {
+                        $placemark = array_merge($placemark, $geometry);
+                    }
 
-            if ($placemarkXml->Polygon) {
-                $placemark['type'] = 'Polygon';
-                $placemark['coordinates'] = $this->parsePolygonCoordinates($placemarkXml->Polygon);
+                    break;
+                }
             }
 
             if ($placemarkXml->styleUrl) {
@@ -139,6 +130,60 @@ class KmlParser
         }
 
         return $placemarks;
+    }
+
+    /**
+     * Turn one KML geometry element into its array representation.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function parseGeometry(GeometryType $type, SimpleXMLElement $geometry): ?array
+    {
+        return match ($type) {
+            GeometryType::POINT => [
+                'type' => $type->value,
+                'coordinates' => $this->parsePointCoordinates((string) $geometry->coordinates),
+            ],
+            GeometryType::LINE_STRING => [
+                'type' => $type->value,
+                'coordinates' => $this->parseLineStringCoordinates((string) $geometry->coordinates),
+            ],
+            GeometryType::POLYGON => [
+                'type' => $type->value,
+                'coordinates' => $this->parsePolygonCoordinates($geometry),
+            ],
+            GeometryType::MULTI_GEOMETRY => [
+                'type' => $type->value,
+                'geometries' => $this->parseMultiGeometry($geometry),
+            ],
+        };
+    }
+
+    /**
+     * A MultiGeometry holds nested geometries instead of coordinates, and KML
+     * allows those to be MultiGeometry elements in turn.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function parseMultiGeometry(SimpleXMLElement $multiGeometry): array
+    {
+        $geometries = [];
+
+        foreach ($multiGeometry->children() as $name => $child) {
+            $type = GeometryType::tryFrom((string) $name);
+
+            if ($type === null) {
+                continue;
+            }
+
+            $geometry = $this->parseGeometry($type, $child);
+
+            if ($geometry !== null) {
+                $geometries[] = $geometry;
+            }
+        }
+
+        return $geometries;
     }
 
     /**
@@ -239,92 +284,108 @@ class KmlParser
     public function toGeoJson(): array
     {
         $features = [];
-        $placemarks = $this->getPlacemarks();
 
-        foreach ($placemarks as $placemark) {
-            if (isset($placemark['coordinates'])) {
-                $feature = [
-                    'type' => 'Feature',
-                    'properties' => [
-                        'name' => $placemark['name'],
-                        'description' => $placemark['description'],
-                    ],
-                ];
+        foreach ($this->getPlacemarks() as $placemark) {
+            $geometry = $this->toGeoJsonGeometry($placemark);
 
-                // Set geometry based on type
-                if ($placemark['type'] === 'Point') {
-                    $feature['geometry'] = [
-                        'type' => 'Point',
-                        'coordinates' => [
-                            $placemark['coordinates']['longitude'],
-                            $placemark['coordinates']['latitude'],
-                            $placemark['coordinates']['altitude'],
-                        ],
-                    ];
-                } elseif ($placemark['type'] === 'LineString') {
-                    $coordinates = [];
-                    foreach ($placemark['coordinates'] as $coord) {
-                        $coordinates[] = [
-                            $coord['longitude'],
-                            $coord['latitude'],
-                            $coord['altitude'],
-                        ];
-                    }
-
-                    $feature['geometry'] = [
-                        'type' => 'LineString',
-                        'coordinates' => $coordinates,
-                    ];
-                } elseif ($placemark['type'] === 'Polygon') {
-                    $outerCoordinates = [];
-                    foreach ($placemark['coordinates']['outerBoundary'] as $coord) {
-                        $outerCoordinates[] = [
-                            $coord['longitude'],
-                            $coord['latitude'],
-                            $coord['altitude'],
-                        ];
-                    }
-
-                    $innerCoordinates = [];
-                    foreach ($placemark['coordinates']['innerBoundaries'] as $innerBoundary) {
-                        $innerBoundaryCoords = [];
-                        foreach ($innerBoundary as $coord) {
-                            $innerBoundaryCoords[] = [
-                                $coord['longitude'],
-                                $coord['latitude'],
-                                $coord['altitude'],
-                            ];
-                        }
-                        $innerCoordinates[] = $innerBoundaryCoords;
-                    }
-
-                    $allCoordinates = [$outerCoordinates];
-                    if (! empty($innerCoordinates)) {
-                        $allCoordinates = array_merge($allCoordinates, $innerCoordinates);
-                    }
-
-                    $feature['geometry'] = [
-                        'type' => 'Polygon',
-                        'coordinates' => $allCoordinates,
-                    ];
-                }
-
-                if (isset($placemark['styleUrl'])) {
-                    $feature['properties']['styleUrl'] = $placemark['styleUrl'];
-                }
-
-                if (isset($placemark['extendedData'])) {
-                    $feature['properties']['extendedData'] = $placemark['extendedData'];
-                }
-
-                $features[] = $feature;
+            if ($geometry === null) {
+                continue;
             }
+
+            $feature = [
+                'type' => 'Feature',
+                'properties' => [
+                    'name' => $placemark['name'],
+                    'description' => $placemark['description'],
+                ],
+                'geometry' => $geometry,
+            ];
+
+            if (isset($placemark['styleUrl'])) {
+                $feature['properties']['styleUrl'] = $placemark['styleUrl'];
+            }
+
+            if (isset($placemark['extendedData'])) {
+                $feature['properties']['extendedData'] = $placemark['extendedData'];
+            }
+
+            $features[] = $feature;
         }
 
         return [
             'type' => 'FeatureCollection',
             'features' => $features,
         ];
+    }
+
+    /**
+     * A KML MultiGeometry maps onto a GeoJSON GeometryCollection, which nests
+     * the same way, so this recurses alongside parseMultiGeometry().
+     *
+     * @param  array<string, mixed>  $geometry
+     * @return array<string, mixed>|null
+     */
+    protected function toGeoJsonGeometry(array $geometry): ?array
+    {
+        return match ($geometry['type'] ?? null) {
+            GeometryType::POINT->value => [
+                'type' => 'Point',
+                'coordinates' => $this->toGeoJsonPosition($geometry['coordinates']),
+            ],
+            GeometryType::LINE_STRING->value => [
+                'type' => 'LineString',
+                'coordinates' => array_map(
+                    fn (array $position) => $this->toGeoJsonPosition($position),
+                    $geometry['coordinates'],
+                ),
+            ],
+            GeometryType::POLYGON->value => [
+                'type' => 'Polygon',
+                'coordinates' => $this->toGeoJsonRings($geometry['coordinates']),
+            ],
+            GeometryType::MULTI_GEOMETRY->value => [
+                'type' => 'GeometryCollection',
+                'geometries' => array_values(array_filter(array_map(
+                    fn (array $child) => $this->toGeoJsonGeometry($child),
+                    $geometry['geometries'],
+                ))),
+            ],
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array{longitude: float, latitude: float, altitude: float}  $position
+     * @return array<int, float>
+     */
+    protected function toGeoJsonPosition(array $position): array
+    {
+        return [$position['longitude'], $position['latitude'], $position['altitude']];
+    }
+
+    /**
+     * GeoJSON puts the outer ring first and every inner ring after it.
+     *
+     * @param  array{outerBoundary: array<int, array<string, float>>, innerBoundaries: array<int, array<int, array<string, float>>>}  $boundaries
+     * @return array<int, array<int, array<int, float>>>
+     */
+    protected function toGeoJsonRings(array $boundaries): array
+    {
+        $rings = [
+            array_map(
+                fn (array $position) => $this->toGeoJsonPosition($position),
+                $boundaries['outerBoundary'],
+            ),
+        ];
+
+        foreach ($boundaries['innerBoundaries'] as $innerBoundary) {
+            $rings[] = array_map(
+                fn (array $position) => $this->toGeoJsonPosition($position),
+                $innerBoundary,
+            );
+        }
+
+        return $rings;
     }
 
     /**

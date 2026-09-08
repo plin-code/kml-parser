@@ -6,6 +6,20 @@ use SimpleXMLElement;
 
 trait ParsesCoordinates
 {
+    /**
+     * @return array{longitude: float, latitude: float, altitude: float}
+     */
+    protected function parsePointCoordinates(string $coordinates): array
+    {
+        $parts = explode(',', trim($coordinates));
+
+        return [
+            'longitude' => (float) $parts[0],
+            'latitude' => (float) ($parts[1] ?? 0),
+            'altitude' => isset($parts[2]) ? (float) $parts[2] : 0,
+        ];
+    }
+
     protected function parseLineStringCoordinates(string $coordinates): array
     {
         $coords = [];

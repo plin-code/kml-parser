@@ -47,17 +47,45 @@ class KmlValidator
 
     protected function validatePlacemark(SimpleXMLElement $placemark): void
     {
-        $hasGeometry = false;
         foreach (GeometryType::cases() as $type) {
             if ($placemark->{$type->value}) {
-                $hasGeometry = true;
-                $this->validateGeometryCoordinates($placemark->{$type->value}, $type->value);
-                break;
+                $this->validateGeometry($placemark->{$type->value}, $type);
+
+                return;
             }
         }
 
-        if (! $hasGeometry) {
-            throw new KmlException('Found Placemark without valid geometry');
+        throw new KmlException('Found Placemark without valid geometry');
+    }
+
+    protected function validateGeometry(SimpleXMLElement $geometry, GeometryType $type): void
+    {
+        if ($type === GeometryType::MULTI_GEOMETRY) {
+            $this->validateMultiGeometry($geometry);
+
+            return;
+        }
+
+        $this->validateGeometryCoordinates($geometry, $type->value);
+    }
+
+    /**
+     * A MultiGeometry carries no coordinates of its own, only nested
+     * geometries, and KML allows those to be MultiGeometry elements in turn.
+     */
+    protected function validateMultiGeometry(SimpleXMLElement $multiGeometry): void
+    {
+        $found = false;
+
+        foreach (GeometryType::cases() as $type) {
+            foreach ($multiGeometry->{$type->value} as $child) {
+                $found = true;
+                $this->validateGeometry($child, $type);
+            }
+        }
+
+        if (! $found) {
+            throw new KmlException('Found MultiGeometry without any geometry');
         }
     }
 
