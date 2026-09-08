@@ -51,8 +51,7 @@
     },
     "autoload": {
         "psr-4": {
-            "PlinCode\\KmlParser\\": "src/",
-            "PlinCode\\KmlParser\\Database\\Factories\\": "database/factories/"
+            "PlinCode\\KmlParser\\": "src/"
         }
     },
     "autoload-dev": {
