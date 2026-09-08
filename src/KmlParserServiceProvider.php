@@ -21,7 +21,13 @@ class KmlParserServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
-        $this->app->singleton(KmlParser::class, function () {
+        /*
+         * The parser keeps the loaded document in memory, so a singleton would
+         * leak that state across requests under Octane and across jobs in a
+         * long running queue worker. A scoped binding is resolved once per
+         * request/job lifecycle and flushed in between.
+         */
+        $this->app->scoped(KmlParser::class, function () {
             return new KmlParser;
         });
     }
