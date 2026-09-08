@@ -60,7 +60,7 @@ class KmlParser
             $this->xml->registerXPathNamespace('kml', $this->namespace);
 
             return $this;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             libxml_clear_errors();
             throw KmlParserException::failedToParse($e->getMessage());
         }
