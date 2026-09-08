@@ -21,7 +21,7 @@ it('throws exception on invalid XML', function () {
     $parser = new KmlParser;
 
     $parser->loadFromString('invalid xml content');
-})->throws(KmlParserException::class, 'Failed to parse KML content');
+})->throws(KmlParserException::class, 'XML parsing error');
 
 it('throws exception when KMZ file not found', function () {
     $extractor = new KmzExtractor;
