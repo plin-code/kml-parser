@@ -6,12 +6,14 @@ use Exception;
 use PlinCode\KmlParser\Enums\GeometryType;
 use PlinCode\KmlParser\Exceptions\KmlParserException;
 use PlinCode\KmlParser\Traits\ParsesCoordinates;
+use PlinCode\KmlParser\Traits\ReadsPackageConfig;
 use PlinCode\KmlParser\Validators\KmlValidator;
 use SimpleXMLElement;
 
 class KmlParser
 {
     use ParsesCoordinates;
+    use ReadsPackageConfig;
 
     protected ?SimpleXMLElement $xml = null;
 
@@ -21,7 +23,7 @@ class KmlParser
 
     public function __construct()
     {
-        $this->namespace = config('kml-parser.namespace', $this->namespace);
+        $this->namespace = $this->packageConfig('kml-parser.namespace', $this->namespace);
         $this->validator = new KmlValidator($this->supportedNamespaces());
     }
 
@@ -33,7 +35,7 @@ class KmlParser
      */
     protected function supportedNamespaces(): array
     {
-        $supported = config('kml-parser.supported_namespaces', KmlValidator::DEFAULT_NAMESPACES);
+        $supported = $this->packageConfig('kml-parser.supported_namespaces', KmlValidator::DEFAULT_NAMESPACES);
 
         return array_values(array_unique(array_merge([$this->namespace], (array) $supported)));
     }
