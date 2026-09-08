@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/plin-code/kml-parser/main/art/banner.png" alt="Laravel KML Parser">
+</p>
+
 # Laravel KML Parser
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/plin-code/kml-parser.svg?style=flat-square)](https://packagist.org/packages/plin-code/kml-parser)
