@@ -16,7 +16,7 @@ trait ParsesCoordinates
         return [
             'longitude' => (float) $parts[0],
             'latitude' => (float) ($parts[1] ?? 0),
-            'altitude' => isset($parts[2]) ? (float) $parts[2] : 0,
+            'altitude' => isset($parts[2]) ? (float) $parts[2] : 0.0,
         ];
     }
 
@@ -35,7 +35,7 @@ trait ParsesCoordinates
                 $coords[] = [
                     'longitude' => (float) $parts[0],
                     'latitude' => (float) $parts[1],
-                    'altitude' => isset($parts[2]) ? (float) $parts[2] : 0,
+                    'altitude' => isset($parts[2]) ? (float) $parts[2] : 0.0,
                 ];
             }
         }
