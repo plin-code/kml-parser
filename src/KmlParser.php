@@ -117,13 +117,7 @@ class KmlParser
             }
 
             if ($placemarkXml->ExtendedData) {
-                $extendedData = [];
-                foreach ($placemarkXml->ExtendedData->Data as $data) {
-                    $name = (string) $data->attributes()->name;
-                    $value = (string) $data->value;
-                    $extendedData[$name] = $value;
-                }
-                $placemark['extendedData'] = $extendedData;
+                $placemark['extendedData'] = $this->parseExtendedData($placemarkXml->ExtendedData);
             }
 
             $placemarks[] = $placemark;
@@ -247,10 +241,94 @@ class KmlParser
                 }
             }
 
+            if ($styleXml->LineStyle) {
+                $style['lineStyle'] = $this->parseLineStyle($styleXml->LineStyle);
+            }
+
+            if ($styleXml->PolyStyle) {
+                $style['polyStyle'] = $this->parsePolyStyle($styleXml->PolyStyle);
+            }
+
             $styles[$id] = $style;
         }
 
         return $styles;
+    }
+
+    /**
+     * KML carries typed attributes two different ways: <Data> pairs, and
+     * <SimpleData> entries inside a <SchemaData> block, which is what ogr2ogr
+     * and QGIS emit. Both land in the same map, SimpleData last so an explicit
+     * schema value wins over a plain Data pair of the same name.
+     *
+     * @return array<string, string>
+     */
+    protected function parseExtendedData(SimpleXMLElement $extendedData): array
+    {
+        $parsed = [];
+
+        foreach ($extendedData->Data as $data) {
+            $parsed[(string) $data->attributes()->name] = (string) $data->value;
+        }
+
+        foreach ($extendedData->SchemaData as $schemaData) {
+            foreach ($schemaData->SimpleData as $simpleData) {
+                $parsed[(string) $simpleData->attributes()->name] = (string) $simpleData;
+            }
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * The stroke of a LineString and the outline of a Polygon.
+     *
+     * Only the elements the document actually declares are reported. KML
+     * defines defaults for both, but filling them in here would stop the
+     * caller from telling "the file said nothing" apart from "the file said
+     * exactly the default".
+     *
+     * @return array<string, string|float>
+     */
+    protected function parseLineStyle(SimpleXMLElement $lineStyle): array
+    {
+        $parsed = [];
+
+        if (isset($lineStyle->color)) {
+            $parsed['color'] = (string) $lineStyle->color;
+        }
+
+        if (isset($lineStyle->width)) {
+            $parsed['width'] = (float) $lineStyle->width;
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * The fill of a Polygon. `fill` and `outline` are the KML booleans 0 and 1,
+     * and are read with isset() rather than a truthiness check so that an
+     * explicit <fill>0</fill> is reported instead of being dropped.
+     *
+     * @return array<string, string|bool>
+     */
+    protected function parsePolyStyle(SimpleXMLElement $polyStyle): array
+    {
+        $parsed = [];
+
+        if (isset($polyStyle->color)) {
+            $parsed['color'] = (string) $polyStyle->color;
+        }
+
+        if (isset($polyStyle->fill)) {
+            $parsed['fill'] = (string) $polyStyle->fill === '1';
+        }
+
+        if (isset($polyStyle->outline)) {
+            $parsed['outline'] = (string) $polyStyle->outline === '1';
+        }
+
+        return $parsed;
     }
 
     /**
