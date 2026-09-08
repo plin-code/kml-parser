@@ -36,9 +36,25 @@ return [
     | Temporary Directory
     |--------------------------------------------------------------------------
     |
-    | This value determines the temporary directory used for extracting KMZ files.
-    | If null, the system temp directory will be used.
+    | Where KmzExtractor::extractAllFiles() writes when the caller names no
+    | destination. Each call gets its own directory underneath it. If null,
+    | the system temp directory is used.
     |
     */
     'temp_directory' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Archive Limits
+    |--------------------------------------------------------------------------
+    |
+    | A KMZ is a ZIP, and a ZIP can declare a handful of entries that expand
+    | into far more than the machine has. An archive breaching either ceiling
+    | is rejected before anything is read out of it. A real KMZ is a KML plus
+    | its icons, nowhere near either number. Set one to 0 to disable it.
+    |
+    */
+    'max_archive_entries' => 5000,
+
+    'max_uncompressed_size' => 256 * 1024 * 1024,
 ];
