@@ -46,25 +46,23 @@ class KmlParser
      */
     public function loadFromString(string $content): self
     {
+        $previous = libxml_use_internal_errors(true);
+
         try {
-            $this->validator->validate($content);
-            libxml_use_internal_errors(true);
-            $this->xml = new SimpleXMLElement($content);
-
-            $errors = libxml_get_errors();
-            if ($errors) {
-                $errorMessage = $errors[0]->message;
-                libxml_clear_errors();
-                throw KmlParserException::invalidXml($errorMessage);
-            }
-
-            $this->xml->registerXPathNamespace('kml', $this->namespace);
-
-            return $this;
+            $xml = new SimpleXMLElement($content);
         } catch (Exception $e) {
+            throw KmlParserException::invalidXml($e->getMessage());
+        } finally {
             libxml_clear_errors();
-            throw KmlParserException::failedToParse($e->getMessage());
+            libxml_use_internal_errors($previous);
         }
+
+        $this->validator->validateDocument($xml);
+
+        $this->xml = $xml;
+        $this->xml->registerXPathNamespace('kml', $this->namespace);
+
+        return $this;
     }
 
     /**

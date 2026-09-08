@@ -12,36 +12,52 @@ class KmlValidator
 
     protected SimpleXMLElement $xml;
 
+    /**
+     * Parse and validate raw KML content.
+     *
+     * @throws KmlException
+     */
     public function validate(string $content): void
     {
-        libxml_use_internal_errors(true);
+        $previous = libxml_use_internal_errors(true);
 
         try {
-            $this->xml = new SimpleXMLElement($content);
-
-            $namespaces = $this->xml->getDocNamespaces();
-            if (! isset($namespaces['']) || $namespaces[''] !== $this->namespace) {
-                throw new KmlException('Invalid or missing KML namespace');
-            }
-
-            $this->xml->registerXPathNamespace('kml', $this->namespace);
-
-            if (empty($this->xml->Document)) {
-                throw new KmlException('Missing required element: Document');
-            }
-
-            $placemarks = $this->xml->xpath('//kml:Placemark');
-            if (! empty($placemarks)) {
-                foreach ($placemarks as $placemark) {
-                    $this->validatePlacemark($placemark);
-                }
-            }
-        } catch (KmlException $e) {
-            throw $e;
+            $xml = new SimpleXMLElement($content);
         } catch (\Exception $e) {
             throw new KmlException('Invalid KML content: '.$e->getMessage());
         } finally {
             libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
+        $this->validateDocument($xml);
+    }
+
+    /**
+     * Validate an already parsed KML document.
+     *
+     * Callers that have parsed the document themselves should use this instead
+     * of validate(), so the content is not parsed twice.
+     *
+     * @throws KmlException
+     */
+    public function validateDocument(SimpleXMLElement $xml): void
+    {
+        $this->xml = $xml;
+
+        $namespaces = $xml->getDocNamespaces();
+        if (! isset($namespaces['']) || $namespaces[''] !== $this->namespace) {
+            throw new KmlException('Invalid or missing KML namespace');
+        }
+
+        $xml->registerXPathNamespace('kml', $this->namespace);
+
+        if (empty($xml->Document)) {
+            throw new KmlException('Missing required element: Document');
+        }
+
+        foreach ($xml->xpath('//kml:Placemark') ?: [] as $placemark) {
+            $this->validatePlacemark($placemark);
         }
     }
 
