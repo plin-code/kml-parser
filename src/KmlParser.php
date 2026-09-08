@@ -60,7 +60,7 @@ class KmlParser
             $this->xml->registerXPathNamespace('kml', $this->namespace);
 
             return $this;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             libxml_clear_errors();
             throw KmlParserException::failedToParse($e->getMessage());
         }
@@ -95,7 +95,7 @@ class KmlParser
 
         foreach ($placemarksXml as $placemarkXml) {
             $placemark = [
-                'name' => (string) ($placemarkXml->name ?: $placemarkXml->n),
+                'name' => (string) $placemarkXml->name,
                 'description' => (string) $placemarkXml->description,
             ];
 
@@ -157,6 +157,17 @@ class KmlParser
 
         foreach ($stylesXml as $styleXml) {
             $id = (string) $styleXml->attributes()->id;
+
+            /*
+             * A Style declared inline on a Placemark carries no id and cannot be
+             * referenced through a styleUrl. Keeping it here would make every
+             * anonymous style collide under the same empty key, so only shared
+             * styles end up in the returned map.
+             */
+            if ($id === '') {
+                continue;
+            }
+
             $style = [
                 'id' => $id,
             ];
@@ -341,8 +352,6 @@ class KmlParser
         $document = $this->xml->xpath('//kml:Document');
         if (! empty($document) && isset($document[0]->name)) {
             return (string) $document[0]->name;
-        } elseif (! empty($document) && isset($document[0]->n)) {
-            return (string) $document[0]->n;
         }
 
         return null;
