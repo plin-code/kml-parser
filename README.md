@@ -261,7 +261,13 @@ $extractor = new KmzExtractor();
 $files = $extractor->extractAllFiles('path/to/file.kmz', 'extraction/directory');
 ```
 
-`extractAllFiles()` returns the list of entry names it wrote. It extracts whatever the archive contains, so point it at a directory you control and treat uploaded archives as untrusted input.
+`extractAllFiles()` returns the list of entry names it wrote. Leave the destination out and it writes to a directory of its own under `temp_directory`, or under the system temp directory when that is null:
+
+```php
+$files = $extractor->extractAllFiles('path/to/file.kmz');
+```
+
+Archives are checked before anything is read out of them. An archive is rejected when it declares more than `max_archive_entries` entries, when its entries add up to more than `max_uncompressed_size` bytes uncompressed, or when any entry name is absolute or contains `..` and would therefore write outside the destination. Set either limit to `0` to turn it off.
 
 ## Error handling
 
@@ -312,8 +318,14 @@ return [
         'http://earth.google.com/kml/2.0',
     ],
 
-    // Reserved for KMZ extraction. Not used yet.
+    // Where extractAllFiles() writes when given no destination.
+    // null means the system temp directory.
     'temp_directory' => null,
+
+    // Ceilings applied to a KMZ before anything is read out of it.
+    // Set either to 0 to disable it.
+    'max_archive_entries' => 5000,
+    'max_uncompressed_size' => 256 * 1024 * 1024,
 ];
 ```
 
