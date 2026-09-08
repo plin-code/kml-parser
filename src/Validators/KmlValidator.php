@@ -8,9 +8,46 @@ use SimpleXMLElement;
 
 class KmlValidator
 {
-    protected string $namespace = 'http://www.opengis.net/kml/2.2';
+    /**
+     * The namespaces a KML document is allowed to declare.
+     *
+     * 2.2 is the OGC standard. The earth.google.com variants predate the OGC
+     * taking the format over, and exports carrying them are still in wide
+     * circulation, so rejecting them outright rejects valid files.
+     *
+     * @var array<int, string>
+     */
+    public const DEFAULT_NAMESPACES = [
+        'http://www.opengis.net/kml/2.2',
+        'http://earth.google.com/kml/2.2',
+        'http://earth.google.com/kml/2.1',
+        'http://earth.google.com/kml/2.0',
+    ];
+
+    /** @var array<int, string> */
+    protected array $namespaces;
+
+    protected string $documentNamespace = '';
 
     protected SimpleXMLElement $xml;
+
+    /**
+     * @param  array<int, string>|null  $namespaces  Accepted namespaces, defaults to DEFAULT_NAMESPACES.
+     */
+    public function __construct(?array $namespaces = null)
+    {
+        $namespaces = array_values(array_filter($namespaces ?? self::DEFAULT_NAMESPACES));
+
+        $this->namespaces = $namespaces !== [] ? $namespaces : self::DEFAULT_NAMESPACES;
+    }
+
+    /**
+     * The namespace declared by the document that was validated last.
+     */
+    public function documentNamespace(): string
+    {
+        return $this->documentNamespace;
+    }
 
     /**
      * Parse and validate raw KML content.
@@ -46,11 +83,18 @@ class KmlValidator
         $this->xml = $xml;
 
         $namespaces = $xml->getDocNamespaces();
-        if (! isset($namespaces['']) || $namespaces[''] !== $this->namespace) {
+        $declared = $namespaces[''] ?? null;
+
+        if ($declared === null || ! in_array($declared, $this->namespaces, true)) {
             throw new KmlException('Invalid or missing KML namespace');
         }
 
-        $xml->registerXPathNamespace('kml', $this->namespace);
+        /*
+         * XPath has to run against the namespace the document actually
+         * declares, not the one we would have preferred it to use.
+         */
+        $this->documentNamespace = $declared;
+        $xml->registerXPathNamespace('kml', $declared);
 
         if (empty($xml->Document)) {
             throw new KmlException('Missing required element: Document');
