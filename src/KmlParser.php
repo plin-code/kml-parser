@@ -19,6 +19,8 @@ class KmlParser
 
     protected string $namespace = 'http://www.opengis.net/kml/2.2';
 
+    protected string $documentNamespace = 'http://www.opengis.net/kml/2.2';
+
     protected KmlValidator $validator;
 
     public function __construct()
@@ -75,7 +77,8 @@ class KmlParser
         $this->validator->validateDocument($xml);
 
         $this->xml = $xml;
-        $this->xml->registerXPathNamespace('kml', $this->validator->documentNamespace());
+        $this->documentNamespace = $this->validator->documentNamespace();
+        $this->xml->registerXPathNamespace('kml', $this->documentNamespace);
 
         return $this;
     }
@@ -111,6 +114,7 @@ class KmlParser
             $placemark = [
                 'name' => (string) $placemarkXml->name,
                 'description' => (string) $placemarkXml->description,
+                'folder' => $this->folderPath($placemarkXml),
             ];
 
             foreach (GeometryType::cases() as $type) {
@@ -137,6 +141,31 @@ class KmlParser
         }
 
         return $placemarks;
+    }
+
+    /**
+     * The Folder elements containing a Placemark, outermost first.
+     *
+     * Placemarks are collected with a flat //kml:Placemark query, which is
+     * what makes a Folder invisible in the result. Rather than walking the
+     * tree twice, each Placemark is asked for its own ancestors.
+     *
+     * A Folder without a name contributes an empty string, so the length of
+     * the path always matches the real nesting depth.
+     *
+     * @return array<int, string>
+     */
+    protected function folderPath(SimpleXMLElement $placemark): array
+    {
+        $placemark->registerXPathNamespace('kml', $this->documentNamespace);
+
+        $path = [];
+
+        foreach ($placemark->xpath('ancestor::kml:Folder') ?: [] as $folder) {
+            $path[] = (string) $folder->name;
+        }
+
+        return $path;
     }
 
     /**
@@ -402,6 +431,10 @@ class KmlParser
                 ],
                 'geometry' => $geometry,
             ];
+
+            if ($placemark['folder'] !== []) {
+                $feature['properties']['folder'] = $placemark['folder'];
+            }
 
             if (isset($placemark['styleUrl'])) {
                 $feature['properties']['styleUrl'] = $placemark['styleUrl'];
