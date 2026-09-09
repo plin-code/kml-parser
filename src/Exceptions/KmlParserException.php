@@ -9,6 +9,11 @@ class KmlParserException extends KmlException
         return new self("KML file not found: {$path}");
     }
 
+    public static function failedToRead(string $path): self
+    {
+        return new self("Unable to read KML file: {$path}");
+    }
+
     public static function noDataLoaded(): self
     {
         return new self('No KML data loaded');

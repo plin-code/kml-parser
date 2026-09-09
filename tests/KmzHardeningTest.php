@@ -145,3 +145,13 @@ it('reports a destination it cannot create', function () {
     expect(fn () => (new KmzExtractor)->extractAllFiles($path, $blocker.'/inside'))
         ->toThrow(KmzExtractorException::class, 'Unable to create the extraction directory');
 });
+
+it('falls back to the documented default when a limit is not a number', function () {
+    config()->set('kml-parser.max_archive_entries', 'plenty');
+
+    $path = makeArchive(function (ZipArchive $zip) {
+        $zip->addFromString('doc.kml', validKml());
+    });
+
+    expect((new KmzExtractor)->extractKmlContent($path))->toContain('<kml');
+});

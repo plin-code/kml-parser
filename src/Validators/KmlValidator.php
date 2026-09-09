@@ -167,7 +167,7 @@ class KmlValidator
             throw new KmlException('Empty coordinates in geometry');
         }
 
-        $coords = preg_split('/\s+/', trim($coordinates));
+        $coords = preg_split('/\s+/', trim($coordinates)) ?: [];
         foreach ($coords as $coord) {
             if (empty(trim($coord))) {
                 continue;
