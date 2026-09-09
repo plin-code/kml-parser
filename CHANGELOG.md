@@ -2,6 +2,61 @@
 
 All notable changes to `kml-parser` will be documented in this file.
 
+## v3.1.0 - 2026-09-09
+
+Folder hierarchy, and three bugs that turned up while raising static analysis to its strictest level.
+
+### Added
+
+**`<Folder>` is no longer flattened away.** Placemarks are collected with a flat `//kml:Placemark` query, which is what lets the parser find them at any depth, and also what made the folders invisible. A document organised into folders came back as one undifferentiated list, and the grouping the author put there, usually the layer names in a Google My Maps export, was gone.
+
+Every placemark now carries the path of the folders containing it:
+
+```php
+[
+    'name' => 'Lago Blu',
+    'description' => 'A lake',
+    'folder' => ['Piemonte', 'Laghi'],
+    'type' => 'Point',
+    'coordinates' => [...],
+]
+
+```
+Outermost first, and an empty array for a placemark sitting directly under the `Document`. The list itself stays flat, so nothing is duplicated and grouping stays a one-liner:
+
+```php
+collect($parser->getPlacemarks())
+    ->groupBy(fn (array $placemark) => implode('/', $placemark['folder']));
+
+```
+A `Folder` with no `<name>` contributes an empty string rather than being skipped, so the length of the path always matches the real nesting depth. Otherwise `['Piemonte']` would mean both "one level deep" and "two levels deep inside an unnamed folder".
+
+`toGeoJson()` carries the path into `properties`, but only for a placemark that actually is in a folder. A flat document produces byte-identical GeoJSON to 3.0.
+
+### Fixed
+
+**An unreadable file reported the wrong problem.** `file_get_contents()` returns `false` when a file exists but cannot be opened: a permissions problem, a file mid-write, a broken symlink. That `false` was passed straight into `loadFromString()`, became the empty string, and surfaced as `XML parsing error: String could not be parsed as XML`. That points at the content. The content was fine, the file could not be read. Now `Unable to read KML file: <path>`, distinct from the existing not-found error.
+
+**`xpath()` and `preg_split()` failures were iterated.** Both return `false` on failure and both were fed straight to `foreach`, at five call sites across the parser, the validator and the coordinate trait. All now fall back to an empty array.
+
+**A non-numeric archive limit silently turned the limit off.** The KMZ ceilings added in 3.0 were read with a blind `(int)` cast, and `(int) 'plenty'` is `0`, which is the documented way to *disable* a limit. So a typo in the config removed the protection instead of being rejected, which is the worst possible failure direction for that particular setting. A value that is not a number now falls back to the documented default.
+
+### Internal
+
+**PHPStan raised from level 5 to level 9.** Level 5 let the whole public surface through as bare `array`, which told an IDE nothing and let no analysis catch a caller reading a key that is never set, such as `coordinates` on a MultiGeometry.
+
+Every getter is now typed as precisely as it honestly can be, with the coordinate shapes declared once and imported where they are used. A placemark genuinely is a heterogeneous map, and claiming otherwise would be a fiction the analyser then enforces on everyone; typed objects remain separate, breaking work.
+
+Reached with the baseline still empty, no `@phpstan-ignore` comments, no inline `@var` overrides, and no casts or widened signatures added to quiet the analyser. The GeoJSON conversion is narrowed with real runtime checks instead, so a hand-built or partly malformed geometry array now returns `null` or `0.0` for the bad part rather than raising a TypeError.
+
+The test suite went from 79 tests to 91.
+
+### Upgrading from 3.0
+
+`composer update`. Nothing was removed and no message changed.
+
+One thing to check: `getPlacemarks()` entries gained the `folder` key. Additive, but a test comparing a whole placemark array with `===` or Pest's `toBe()` will notice the extra key. Reading individual keys is unaffected.
+
 ## v3.0.0 - 2026-09-09
 
 A major one day after the last one, which needs explaining: v2.0.0 was about what the parser could read. This one is about what it is willing to run on, and the answer changed for a security reason that should not wait behind a feature release.
@@ -15,6 +70,7 @@ Laravel 11's security window closed in March 2026. The advisories currently open
 ```
 Temporary Signed URL Path Confusion   fixed in: 12.61.1, 13.12.0
 CRLF injection in default email rule  fixed in: 12.60.0, 13.10.0
+
 
 ```
 Declaring `^11.0` told every consumer that an unpatched framework was a supported configuration. `composer audit` is clean on 12 and 13.
@@ -32,6 +88,7 @@ Applications still on Laravel 11 stay on `plin-code/kml-parser:^2.0`, which keep
 ```php
 $extractor->extractAllFiles($kmz);              // temp_directory, else sys_get_temp_dir()
 $extractor->extractAllFiles($kmz, '/my/path');  // unchanged
+
 
 ```
 `defaultDestination()` is public, so a caller can find out where the files went.
