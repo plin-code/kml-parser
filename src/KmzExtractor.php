@@ -128,8 +128,8 @@ class KmzExtractor
      */
     protected function guardArchive(ZipArchive $zip): void
     {
-        $maxEntries = (int) $this->packageConfig('kml-parser.max_archive_entries', self::DEFAULT_MAX_ENTRIES);
-        $maxSize = (int) $this->packageConfig('kml-parser.max_uncompressed_size', self::DEFAULT_MAX_UNCOMPRESSED_SIZE);
+        $maxEntries = $this->configuredLimit('kml-parser.max_archive_entries', self::DEFAULT_MAX_ENTRIES);
+        $maxSize = $this->configuredLimit('kml-parser.max_uncompressed_size', self::DEFAULT_MAX_UNCOMPRESSED_SIZE);
 
         if ($maxEntries > 0 && $zip->numFiles > $maxEntries) {
             throw KmzExtractorException::tooManyEntries($zip->numFiles, $maxEntries);
@@ -152,6 +152,18 @@ class KmzExtractor
                 throw KmzExtractorException::archiveTooLarge($maxSize);
             }
         }
+    }
+
+    /**
+     * A limit that is not a number is a misconfiguration, and silently reading
+     * it as 0 would turn the limit off, which is the opposite of what someone
+     * setting it wants. The documented default is used instead.
+     */
+    protected function configuredLimit(string $key, int $default): int
+    {
+        $value = $this->packageConfig($key, $default);
+
+        return is_numeric($value) ? (int) $value : $default;
     }
 
     /**

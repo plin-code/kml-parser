@@ -10,6 +10,14 @@ use PlinCode\KmlParser\Traits\ReadsPackageConfig;
 use PlinCode\KmlParser\Validators\KmlValidator;
 use SimpleXMLElement;
 
+/**
+ * @phpstan-import-type Position from ParsesCoordinates
+ * @phpstan-import-type PolygonBoundaries from ParsesCoordinates
+ *
+ * @phpstan-type Placemark array<string, mixed>
+ * @phpstan-type Geometry array<string, mixed>
+ * @phpstan-type Style array<string, mixed>
+ */
 class KmlParser
 {
     use ParsesCoordinates;
@@ -25,7 +33,12 @@ class KmlParser
 
     public function __construct()
     {
-        $this->namespace = $this->packageConfig('kml-parser.namespace', $this->namespace);
+        $namespace = $this->packageConfig('kml-parser.namespace', $this->namespace);
+
+        if (is_string($namespace) && $namespace !== '') {
+            $this->namespace = $namespace;
+        }
+
         $this->validator = new KmlValidator($this->supportedNamespaces());
     }
 
@@ -38,8 +51,17 @@ class KmlParser
     protected function supportedNamespaces(): array
     {
         $supported = $this->packageConfig('kml-parser.supported_namespaces', KmlValidator::DEFAULT_NAMESPACES);
+        $supported = is_array($supported) ? $supported : [];
 
-        return array_values(array_unique(array_merge([$this->namespace], (array) $supported)));
+        $namespaces = [$this->namespace];
+
+        foreach ($supported as $namespace) {
+            if (is_string($namespace) && $namespace !== '') {
+                $namespaces[] = $namespace;
+            }
+        }
+
+        return array_values(array_unique($namespaces));
     }
 
     /**
@@ -53,7 +75,19 @@ class KmlParser
             throw KmlParserException::fileNotFound($path);
         }
 
-        return $this->loadFromString(file_get_contents($path));
+        /*
+         * The warning file_get_contents() raises carries less than the
+         * exception below, and an application turning warnings into
+         * exceptions would otherwise get that one instead of ours. The return
+         * value is what is acted on.
+         */
+        $content = @file_get_contents($path);
+
+        if ($content === false) {
+            throw KmlParserException::failedToRead($path);
+        }
+
+        return $this->loadFromString($content);
     }
 
     /**
@@ -99,6 +133,8 @@ class KmlParser
     /**
      * Get Placemarks Node from the KML
      *
+     * @return list<Placemark>
+     *
      * @throws Exception
      */
     public function getPlacemarks(): array
@@ -108,7 +144,7 @@ class KmlParser
         }
 
         $placemarks = [];
-        $placemarksXml = $this->xml->xpath('//kml:Placemark');
+        $placemarksXml = $this->xml->xpath('//kml:Placemark') ?: [];
 
         foreach ($placemarksXml as $placemarkXml) {
             $placemark = [
@@ -225,6 +261,8 @@ class KmlParser
     /**
      * Get Style Node from the KML
      *
+     * @return array<string, Style>
+     *
      * @throws Exception
      */
     public function getStyles(): array
@@ -234,7 +272,7 @@ class KmlParser
         }
 
         $styles = [];
-        $stylesXml = $this->xml->xpath('//kml:Style');
+        $stylesXml = $this->xml->xpath('//kml:Style') ?: [];
 
         foreach ($stylesXml as $styleXml) {
             $id = (string) $styleXml->attributes()->id;
@@ -376,6 +414,8 @@ class KmlParser
     /**
      * Get StyleMap Node from the KML
      *
+     * @return array<string, array{id: string, pairs: array<string, string>}>
+     *
      * @throws Exception
      */
     public function getStyleMaps(): array
@@ -385,7 +425,7 @@ class KmlParser
         }
 
         $styleMaps = [];
-        $styleMapsXml = $this->xml->xpath('//kml:StyleMap');
+        $styleMapsXml = $this->xml->xpath('//kml:StyleMap') ?: [];
 
         foreach ($styleMapsXml as $styleMapXml) {
             $id = (string) $styleMapXml->attributes()->id;
@@ -409,6 +449,8 @@ class KmlParser
 
     /**
      * Convert data to GeoJSON format
+     *
+     * @return array{type: string, features: list<array<string, mixed>>}
      *
      * @throws Exception
      */
@@ -457,67 +499,129 @@ class KmlParser
      * A KML MultiGeometry maps onto a GeoJSON GeometryCollection, which nests
      * the same way, so this recurses alongside parseMultiGeometry().
      *
-     * @param  array<string, mixed>  $geometry
+     * @param  array<mixed>  $geometry
      * @return array<string, mixed>|null
      */
     protected function toGeoJsonGeometry(array $geometry): ?array
     {
-        return match ($geometry['type'] ?? null) {
+        $type = $geometry['type'] ?? null;
+
+        if ($type === GeometryType::MULTI_GEOMETRY->value) {
+            return [
+                'type' => 'GeometryCollection',
+                'geometries' => $this->toGeoJsonGeometries($geometry['geometries'] ?? []),
+            ];
+        }
+
+        $coordinates = $geometry['coordinates'] ?? null;
+
+        if (! is_array($coordinates)) {
+            return null;
+        }
+
+        return match ($type) {
             GeometryType::POINT->value => [
                 'type' => 'Point',
-                'coordinates' => $this->toGeoJsonPosition($geometry['coordinates']),
+                'coordinates' => $this->toGeoJsonPosition($coordinates),
             ],
             GeometryType::LINE_STRING->value => [
                 'type' => 'LineString',
-                'coordinates' => array_map(
-                    fn (array $position) => $this->toGeoJsonPosition($position),
-                    $geometry['coordinates'],
-                ),
+                'coordinates' => $this->toGeoJsonPositions($coordinates),
             ],
             GeometryType::POLYGON->value => [
                 'type' => 'Polygon',
-                'coordinates' => $this->toGeoJsonRings($geometry['coordinates']),
-            ],
-            GeometryType::MULTI_GEOMETRY->value => [
-                'type' => 'GeometryCollection',
-                'geometries' => array_values(array_filter(array_map(
-                    fn (array $child) => $this->toGeoJsonGeometry($child),
-                    $geometry['geometries'],
-                ))),
+                'coordinates' => $this->toGeoJsonRings($coordinates),
             ],
             default => null,
         };
     }
 
     /**
-     * @param  array{longitude: float, latitude: float, altitude: float}  $position
-     * @return array<int, float>
+     * @return list<array<string, mixed>>
+     */
+    protected function toGeoJsonGeometries(mixed $geometries): array
+    {
+        if (! is_array($geometries)) {
+            return [];
+        }
+
+        $converted = [];
+
+        foreach ($geometries as $child) {
+            if (! is_array($child)) {
+                continue;
+            }
+
+            $geometry = $this->toGeoJsonGeometry($child);
+
+            if ($geometry !== null) {
+                $converted[] = $geometry;
+            }
+        }
+
+        return $converted;
+    }
+
+    /**
+     * @param  array<mixed>  $positions
+     * @return list<list<float>>
+     */
+    protected function toGeoJsonPositions(array $positions): array
+    {
+        $converted = [];
+
+        foreach ($positions as $position) {
+            if (is_array($position)) {
+                $converted[] = $this->toGeoJsonPosition($position);
+            }
+        }
+
+        return $converted;
+    }
+
+    /**
+     * A coordinate map as parsePointCoordinates() produces it, turned into the
+     * GeoJSON position order. Anything not numeric reads as 0.0 rather than
+     * throwing, so one malformed coordinate cannot take a whole document down.
+     *
+     * @param  array<mixed>  $position
+     * @return list<float>
      */
     protected function toGeoJsonPosition(array $position): array
     {
-        return [$position['longitude'], $position['latitude'], $position['altitude']];
+        return [
+            $this->toFloat($position['longitude'] ?? null),
+            $this->toFloat($position['latitude'] ?? null),
+            $this->toFloat($position['altitude'] ?? null),
+        ];
+    }
+
+    protected function toFloat(mixed $value): float
+    {
+        return is_numeric($value) ? (float) $value : 0.0;
     }
 
     /**
      * GeoJSON puts the outer ring first and every inner ring after it.
      *
-     * @param  array{outerBoundary: array<int, array<string, float>>, innerBoundaries: array<int, array<int, array<string, float>>>}  $boundaries
-     * @return array<int, array<int, array<int, float>>>
+     * @param  array<mixed>  $boundaries
+     * @return list<list<list<float>>>
      */
     protected function toGeoJsonRings(array $boundaries): array
     {
-        $rings = [
-            array_map(
-                fn (array $position) => $this->toGeoJsonPosition($position),
-                $boundaries['outerBoundary'],
-            ),
-        ];
+        $outer = $boundaries['outerBoundary'] ?? [];
+        $inner = $boundaries['innerBoundaries'] ?? [];
 
-        foreach ($boundaries['innerBoundaries'] as $innerBoundary) {
-            $rings[] = array_map(
-                fn (array $position) => $this->toGeoJsonPosition($position),
-                $innerBoundary,
-            );
+        $rings = [is_array($outer) ? $this->toGeoJsonPositions($outer) : []];
+
+        if (! is_array($inner)) {
+            return $rings;
+        }
+
+        foreach ($inner as $innerBoundary) {
+            if (is_array($innerBoundary)) {
+                $rings[] = $this->toGeoJsonPositions($innerBoundary);
+            }
         }
 
         return $rings;

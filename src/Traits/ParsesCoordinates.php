@@ -4,10 +4,14 @@ namespace PlinCode\KmlParser\Traits;
 
 use SimpleXMLElement;
 
+/**
+ * @phpstan-type Position array{longitude: float, latitude: float, altitude: float}
+ * @phpstan-type PolygonBoundaries array{outerBoundary: list<Position>, innerBoundaries: list<list<Position>>}
+ */
 trait ParsesCoordinates
 {
     /**
-     * @return array{longitude: float, latitude: float, altitude: float}
+     * @return Position
      */
     protected function parsePointCoordinates(string $coordinates): array
     {
@@ -20,10 +24,13 @@ trait ParsesCoordinates
         ];
     }
 
+    /**
+     * @return list<Position>
+     */
     protected function parseLineStringCoordinates(string $coordinates): array
     {
         $coords = [];
-        $points = preg_split('/\s+/', trim($coordinates));
+        $points = preg_split('/\s+/', trim($coordinates)) ?: [];
 
         foreach ($points as $point) {
             if (empty(trim($point))) {
@@ -43,6 +50,9 @@ trait ParsesCoordinates
         return $coords;
     }
 
+    /**
+     * @return PolygonBoundaries
+     */
     protected function parsePolygonCoordinates(SimpleXMLElement $polygon): array
     {
         $result = [
