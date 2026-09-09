@@ -21,7 +21,7 @@ composer analyse
 composer format
 ```
 
-All three have to pass. CI runs them on every pull request, across PHP 8.3 and 8.4, Laravel 11 and 12, on Linux and Windows.
+All three have to pass. CI runs them on every pull request, across PHP 8.3, 8.4 and 8.5, Laravel 12 and 13, on Linux and Windows.
 
 A few things that make review quick:
 

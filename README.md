@@ -13,7 +13,9 @@ Parse KML and KMZ files in a Laravel application. Read placemarks, styles and do
 
 ## Requirements
 
-PHP 8.3 or later, Laravel 11 or 12, and the `simplexml`, `libxml` and `zip` extensions.
+PHP 8.3 or later, Laravel 12 or 13, and the `simplexml`, `libxml` and `zip` extensions.
+
+Laravel 11 is supported by the 2.x line. It reached the end of its security window in March 2026 and the advisories open against it have no fix in the 11.x branch, so 3.x does not accept it.
 
 ## Installation
 
