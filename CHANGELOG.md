@@ -2,6 +2,69 @@
 
 All notable changes to `kml-parser` will be documented in this file.
 
+## v3.0.0 - 2026-09-09
+
+A major one day after the last one, which needs explaining: v2.0.0 was about what the parser could read. This one is about what it is willing to run on, and the answer changed for a security reason that should not wait behind a feature release.
+
+### Breaking changes
+
+**Laravel 11 is no longer supported.** `illuminate/contracts` is now `^12.0||^13.0`.
+
+Laravel 11's security window closed in March 2026. The advisories currently open against the framework are fixed in the 12.60/12.61 and 13.10/13.12 lines, and **no 11.x release carries any of them**:
+
+```
+Temporary Signed URL Path Confusion   fixed in: 12.61.1, 13.12.0
+CRLF injection in default email rule  fixed in: 12.60.0, 13.10.0
+
+```
+Declaring `^11.0` told every consumer that an unpatched framework was a supported configuration. `composer audit` is clean on 12 and 13.
+
+Applications still on Laravel 11 stay on `plin-code/kml-parser:^2.0`, which keeps working and has every parser feature this release has. Nothing about the parsing changed here.
+
+### Added
+
+**Archive limits on KMZ files.** A KMZ is a ZIP, and a ZIP can declare a handful of entries that expand into far more than the machine has. Nothing checked. `extractAllFiles()` extracted whatever it was handed and `extractKmlContent()` read an entry straight into a PHP string, so a hostile archive filled the disk or exhausted the worker's memory. Both now validate before reading anything: `max_archive_entries` (default 5000) and `max_uncompressed_size` (default 256 MB). Set either to `0` to turn it off. A real KMZ is a KML plus its icons, nowhere near either number.
+
+**Entry names are checked.** An entry whose name is absolute, starts with a drive letter, or contains a `..` segment is rejected with the offending name in the message. `ZipArchive::extractTo()` does sanitise paths, so this was not exploitable, but the package was relying on that rather than deciding it.
+
+**`temp_directory` finally does something.** It has been in the config since the first release, promising to determine where KMZ files are extracted, with nothing reading it. `extractAllFiles()` now takes an optional destination and falls back to that key, then to the system temp directory, giving each call a directory of its own:
+
+```php
+$extractor->extractAllFiles($kmz);              // temp_directory, else sys_get_temp_dir()
+$extractor->extractAllFiles($kmz, '/my/path');  // unchanged
+
+```
+`defaultDestination()` is public, so a caller can find out where the files went.
+
+**PHP 8.5 and Laravel 13** are tested. The matrix went from 16 jobs to 24: PHP 8.3, 8.4 and 8.5, Laravel 12 and 13, `prefer-lowest` and `prefer-stable`, Linux and Windows. Every combination was resolved and run before being written into the workflow.
+
+### Fixed
+
+**The parser works outside a booted application.** The constructor called `config()` directly, and that helper does not fall back to its second argument when nothing is bound, it throws `BindingResolutionException`. So `new KmlParser` was fatal in a console script or a plain PHPUnit test. Config is now read through a guard that consults the container only when something is bound to it. Behaviour inside an application is unchanged.
+
+**A destination that cannot be created is reported.** `mkdir()`'s return value was ignored, so the failure surfaced later as something unrelated. It now throws `Unable to create the extraction directory: <path>`.
+
+**`extractAllFiles()` throws `KmzExtractorException`** for a missing or unreadable archive, like the rest of the class, instead of a bare `KmlException`. A narrowing rather than a break: `KmzExtractorException extends KmlException`.
+
+### Housekeeping
+
+**The package skeleton residue is gone.** `database/factories/ModelFactory.php` defined nothing at all, its entire class body sat inside a comment block, and the autoloader was mapped to it anyway. `resources/views/` held a `.gitkeep` and no view is ever registered. `TestCase` pointed Eloquent's factory resolution at that empty namespace. PHPStan was told to check model properties, of which there are none. This package parses XML.
+
+**Pest 3 to Pest 4.** Required to reach Laravel 13, since `pest-plugin-laravel` 3.x caps at Laravel 12. The suite needed no changes. Pest 5 was available but requires PHP ^8.4 and would have cost 8.3 support for nothing.
+
+The test suite went from 65 tests to 79.
+
+### Upgrading from 2.x
+
+If you are on Laravel 12 or 13, `composer require plin-code/kml-parser:^3.0` and nothing else changes. The parser, the output shapes and the exceptions are identical to 2.0.
+
+If you are on Laravel 11, stay on `^2.0`, and treat the framework itself as the thing to plan around: the advisories above have no fix in the 11.x line.
+
+Two things to check if you use `KmzExtractor` directly:
+
+- a `catch (KmlException)` around `extractAllFiles()` still works; a check for the exact `KmlException` class no longer matches, it is now `KmzExtractorException`
+- an archive over 5000 entries or 256 MB uncompressed is now rejected. Raise `max_archive_entries` or `max_uncompressed_size`, or set either to `0`. The exception message says which limit was hit.
+
 ## v2.0.0 - 2026-09-08
 
 The parser accepted a narrower slice of KML than most real files use, and reported several of its own failures as something else. This release fixes both, and changes enough behaviour to need a major.
