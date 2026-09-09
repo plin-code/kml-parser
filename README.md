@@ -72,7 +72,7 @@ KML is a large format and this package covers a subset of it. What that subset i
 | `LineStyle` | yes | `color`, `width` |
 | `PolyStyle` | yes | `color`, `fill`, `outline` |
 | `ExtendedData` | yes | both `Data` pairs and `SchemaData/SimpleData` entries |
-| `Folder` | no | folders are flattened, the hierarchy is lost |
+| `Folder` | yes | the list stays flat, each placemark carries the path of folders containing it |
 | `NetworkLink` | no | |
 | `GroundOverlay`, `ScreenOverlay`, `PhotoOverlay` | no | |
 | `TimeStamp`, `TimeSpan` | no | |
@@ -87,7 +87,7 @@ Anything in the "no" column is ignored rather than rejected. A document using th
 
 ### `getPlacemarks(): array`
 
-A list, one entry per Placemark, in document order. `name` and `description` are always present, `styleUrl` and `extendedData` only when the Placemark declares them.
+A list, one entry per Placemark, in document order. `name`, `description` and `folder` are always present, `styleUrl` and `extendedData` only when the Placemark declares them.
 
 A `Point` carries a single position:
 
@@ -95,6 +95,7 @@ A `Point` carries a single position:
 [
     'name' => 'Lago Blu',
     'description' => 'A lake',
+    'folder' => ['Piemonte', 'Laghi'],
     'type' => 'Point',
     'coordinates' => [
         'longitude' => 7.7,
@@ -106,12 +107,22 @@ A `Point` carries a single position:
 ]
 ```
 
+`folder` is the names of the `Folder` elements containing the Placemark, outermost first, and an empty array for a Placemark sitting directly under the `Document`. The list itself stays flat, so grouping is yours to do:
+
+```php
+collect($parser->getPlacemarks())
+    ->groupBy(fn (array $placemark) => implode('/', $placemark['folder']));
+```
+
+A `Folder` without a name contributes an empty string rather than being skipped, so the length of the path always matches the real nesting depth.
+
 A `LineString` carries a list of them:
 
 ```php
 [
     'name' => 'Route',
     'description' => '',
+    'folder' => [],
     'type' => 'LineString',
     'coordinates' => [
         ['longitude' => 7.1, 'latitude' => 45.1, 'altitude' => 0.0],
@@ -126,6 +137,7 @@ A `Polygon` splits its rings:
 [
     'name' => 'Area',
     'description' => '',
+    'folder' => [],
     'type' => 'Polygon',
     'coordinates' => [
         'outerBoundary' => [
@@ -150,6 +162,7 @@ A `MultiGeometry` has no `coordinates` of its own. It carries `geometries` inste
 [
     'name' => 'Mixed',
     'description' => '',
+    'folder' => [],
     'type' => 'MultiGeometry',
     'geometries' => [
         ['type' => 'Point', 'coordinates' => [...]],
@@ -206,7 +219,7 @@ The `name` and `description` of the first `Document` element, or `null` when abs
 
 ### `toGeoJson(): array`
 
-A `FeatureCollection`. Positions come out as `[longitude, latitude, altitude]`, which is the GeoJSON order, and altitude is always present, `0` when the file omits it. `styleUrl` and `extendedData` are carried into `properties`.
+A `FeatureCollection`. Positions come out as `[longitude, latitude, altitude]`, which is the GeoJSON order, and altitude is always present, `0` when the file omits it. `folder`, `styleUrl` and `extendedData` are carried into `properties`, each only when the Placemark has one.
 
 ```php
 [
