@@ -5,6 +5,8 @@
 # Laravel KML Parser
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/plin-code/kml-parser.svg?style=flat-square)](https://packagist.org/packages/plin-code/kml-parser)
+[![PHP from Packagist](https://img.shields.io/packagist/php-v/plin-code/kml-parser.svg?style=flat-square)](https://packagist.org/packages/plin-code/kml-parser)
+[![Laravel versions](https://badge.laravel.cloud/badge/plin-code/kml-parser?style=flat)](https://packagist.org/packages/plin-code/kml-parser)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/plin-code/kml-parser/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/plin-code/kml-parser/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/plin-code/kml-parser/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/plin-code/kml-parser/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/plin-code/kml-parser.svg?style=flat-square)](https://packagist.org/packages/plin-code/kml-parser)
